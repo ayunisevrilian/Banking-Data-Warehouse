@@ -1,0 +1,35 @@
+CREATE OR ALTER PROCEDURE dbo.BalancePerCustomer
+  @name NVARCHAR(200)   -- partial name, case-insensitive
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  SELECT
+      c.CustomerName,
+      a.AccountType,
+      CAST(a.Balance AS DECIMAL(18,2)) AS Balance,
+      CAST(
+        a.Balance
+        + ISNULL(SUM(
+            CASE WHEN t.TransactionType = 'Deposit'
+                 THEN t.Amount
+                 ELSE -t.Amount
+            END
+          ), 0)
+      AS DECIMAL(18,2)) AS CurrentBalance
+  FROM dbo.DimCustomer  AS c
+  INNER JOIN dbo.DimAccount   AS a
+          ON a.CustomerID = c.CustomerID
+  LEFT  JOIN dbo.FactTransaction AS t
+          ON t.AccountID = a.AccountID
+  WHERE UPPER(a.Status) = 'ACTIVE'                       -- hanya akun aktif
+    AND UPPER(c.CustomerName) LIKE '%' + UPPER(@name) + '%'  -- pencarian nama (partial, CI)
+  GROUP BY
+      c.CustomerName, a.AccountType, a.Balance
+  ORDER BY
+      c.CustomerName, a.AccountType;
+END;
+GO
+
+-- contoh eksekusi
+EXEC dbo.BalancePerCustomer @name = 'Shelly';
