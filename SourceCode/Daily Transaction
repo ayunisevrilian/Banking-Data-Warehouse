@@ -1,0 +1,33 @@
+/*
+=============================================================
+Stored Procedure: DailyTransaction
+=============================================================
+Purpose:
+    This procedure summarizes transactions per day 
+    within a given date range.
+    - Counts total number of transactions per date
+    - Sums total amount per date
+    - Filters data based on input parameters (start_date, end_date)
+=============================================================
+*/
+CREATE OR ALTER PROCEDURE DailyTransaction
+    @start_date DATE,
+    @end_date   DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        CAST(t.TransactionDate AS DATE) AS [Date],
+        COUNT(*) TotalTransactions,
+        SUM(t.Amount) TotalAmount
+    FROM dbo.FactTransaction t
+    WHERE t.TransactionDate BETWEEN @start_date AND @end_date
+    GROUP BY CAST(t.TransactionDate AS DATE)
+    ORDER BY [Date];
+END;
+GO
+
+-- EXEC DailyTransaction
+EXEC DailyTransaction @start_date = '2024-01-18', @end_date = '2024-01-21';
+
+
