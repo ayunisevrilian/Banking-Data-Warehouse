@@ -1,0 +1,46 @@
+/*
+=============================================================
+Stored Procedure: BalancePerCustomer
+=============================================================
+Purpose:
+    This procedure calculates the current balance for each active customer account.
+    - Displays CustomerName, AccountType, Balance, and CurrentBalance
+    - CurrentBalance is calculated as:
+      Balance + SUM(Deposits) - SUM(Other Transactions)
+    - Only includes accounts with status 'ACTIVE'
+=============================================================
+*/
+
+
+CREATE OR ALTER PROCEDURE dbo.BalancePerCustomer
+  @name NVARCHAR(200)   -- customer name (partial, case-insensitive)
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  SELECT
+      c.CustomerName,
+      a.AccountType,
+      CAST(a.Balance AS DECIMAL(18,2)) Balance,
+      CAST(
+        a.Balance
+        + ISNULL(SUM(
+            CASE 
+              WHEN UPPER(t.TransactionType) = 'DEPOSIT' THEN t.Amount
+              ELSE -t.Amount   -- withdrawals/payments reduce balance
+            END
+        ), 0) AS DECIMAL(18,2)) CurrentBalance
+  FROM dbo.DimCustomer c
+  INNER JOIN dbo.DimAccount a
+          ON a.CustomerID = c.CustomerID
+  LEFT  JOIN dbo.FactTransaction t
+          ON t.AccountID = a.AccountID
+  WHERE UPPER(a.Status) = 'ACTIVE'
+    AND UPPER(c.CustomerName) LIKE '%' + UPPER(@name) + '%'
+  GROUP BY c.CustomerName, a.AccountType, a.Balance
+  ORDER BY c.CustomerName, a.AccountType;
+END;
+GO
+
+-- EXEC
+EXEC dbo.BalancePerCustomer @name = 'Shelly';
