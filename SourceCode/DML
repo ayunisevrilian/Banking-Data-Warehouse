@@ -1,0 +1,62 @@
+/*
+=============================================================
+Insert Data from Source (Sample) into DWH Tables
+=============================================================
+Script Purpose:
+    This script inserts data from the Sample source system 
+    into the Data Warehouse (DWH) dimension and fact tables.
+    
+    Notes:
+    - This script focuses on extracting raw data and loading 
+      it into the DWH schema for further processing.
+=============================================================
+*/
+USE DWH;
+
+-- Insert DimCustomer (join with city & state)
+INSERT INTO DimCustomer (CustomerID, CustomerName, Address, CityName, StateName, Age, Gender, Email)
+SELECT 
+	c.customer_id,
+	c.customer_name,
+	c.address,
+	ci.city_name,
+    s.state_name,
+	c.age,
+	c.gender,
+	c.email
+FROM sample.dbo.customer c
+LEFT JOIN sample.dbo.city ci ON c.city_id = ci.city_id
+LEFT JOIN sample.dbo.state s ON ci.state_id = s.state_id;
+
+
+-- Insert DimAccount
+INSERT INTO DimAccount (AccountID, CustomerID, AccountType, Balance, DateOpened, Status)
+SELECT 
+	account_id, 
+	customer_id, 
+	account_type, 
+	balance, 
+	date_opened, 
+	status
+FROM sample.dbo.account;
+
+
+-- Insert DimBranch
+INSERT INTO DimBranch (BranchID, BranchName, BranchLocation)
+SELECT 
+	branch_id, 
+	branch_name,
+	branch_location
+FROM sample.dbo.branch;
+
+
+-- Insert FactTransaction (for testing, only from DB source)
+INSERT INTO FactTransaction (TransactionID, AccountID, BranchID, TransactionDate, Amount, TransactionType)
+SELECT 
+	transaction_id, 
+	account_id, 
+	branch_id,
+	transaction_date, 
+	amount, 
+	transaction_type
+FROM sample.dbo.transaction_db;
